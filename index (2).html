@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>便利貼看板 | Sticky Notes Board</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: 質感手寫感與易讀無襯線字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome 圖標 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      touch-action: pan-x pan-y;
+      user-select: none;
+    }
+    
+    /* 軟木塞微紋理背景 */
+    .cork-texture {
+      background-color: #d8b082;
+      background-image: 
+        radial-gradient(rgba(120, 75, 30, 0.12) 15%, transparent 16%),
+        radial-gradient(rgba(100, 60, 20, 0.1) 15%, transparent 16%);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+    }
+
+    /* 便利貼手寫感標題 */
+    .note-font {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    /* 便利貼光影效果與擬真摺紙陰影 */
+    .sticky-note {
+      box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.2s ease, transform 0.15s ease;
+      touch-action: none;
+    }
+
+    .sticky-note:hover {
+      box-shadow: 0 16px 28px -6px rgba(0, 0, 0, 0.25), 0 8px 10px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .sticky-note.dragging {
+      opacity: 0.92;
+      cursor: grabbing !important;
+      box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.35);
+      z-index: 9999 !important;
+    }
+
+    /* 頂部半透明擬真膠帶效果 */
+    .tape-strip {
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(1px);
+    }
+
+    /* 捲軸美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.35);
+    }
+  </style>
+</head>
+
+<body class="cork-texture min-h-screen flex flex-col overflow-hidden text-stone-800">
+
+  <!-- 頂部操作導覽列 -->
+  <header class="bg-amber-900/90 backdrop-blur-md text-amber-50 px-4 py-3 shadow-md z-30 flex flex-wrap items-center justify-between gap-3 border-b border-amber-800">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-amber-600 flex items-center justify-center shadow-inner">
+        <i class="fa-solid fa-thumbtack text-amber-100 text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+          便利貼靈感看板
+          <span class="text-xs bg-amber-700/80 text-amber-200 px-2 py-0.5 rounded-full font-mono font-normal">LocalStorage</span>
+        </h1>
+        <p class="text-xs text-amber-200/80">自動儲存內容、位置與顏色，重整依然完整保留</p>
+      </div>
+    </div>
+
+    <div class="flex items-center flex-wrap gap-2.5">
+      <!-- 快捷顏色選擇新增鈕 -->
+      <div class="flex items-center bg-amber-950/50 p-1.5 rounded-xl border border-amber-800/60 shadow-inner">
+        <span class="text-xs text-amber-300 font-medium px-2 hidden sm:inline"><i class="fa-solid fa-plus mr-1"></i>新增：</span>
+        
+        <button onclick="addNote('yellow')" title="新增金黃便利貼" class="w-7 h-7 rounded-lg bg-amber-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-amber-300 mr-1.5 focus:outline-none"></button>
+        <button onclick="addNote('pink')" title="新增粉紅便利貼" class="w-7 h-7 rounded-lg bg-rose-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-rose-300 mr-1.5 focus:outline-none"></button>
+        <button onclick="addNote('blue')" title="新增天藍便利貼" class="w-7 h-7 rounded-lg bg-sky-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-sky-300 mr-1.5 focus:outline-none"></button>
+        <button onclick="addNote('green')" title="新增薄荷綠便利貼" class="w-7 h-7 rounded-lg bg-emerald-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-emerald-300 mr-1.5 focus:outline-none"></button>
+        <button onclick="addNote('purple')" title="新增丁香紫便利貼" class="w-7 h-7 rounded-lg bg-purple-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-purple-300 mr-1.5 focus:outline-none"></button>
+        <button onclick="addNote('orange')" title="新增暖橘便利貼" class="w-7 h-7 rounded-lg bg-orange-200 hover:scale-110 active:scale-95 transition-transform shadow-sm border border-orange-300 focus:outline-none"></button>
+      </div>
+
+      <!-- 功能操作按鈕組 -->
+      <button onclick="tidyNotes()" class="bg-amber-800 hover:bg-amber-700 text-amber-100 text-sm font-medium px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5 active:scale-95">
+        <i class="fa-solid fa-table-cells"></i>
+        <span class="hidden md:inline">自動整齊排列</span>
+      </button>
+
+      <button onclick="confirmClearAll()" class="bg-red-900/80 hover:bg-red-800 text-red-100 text-sm font-medium px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5 active:scale-95">
+        <i class="fa-solid fa-trash-can"></i>
+        <span class="hidden md:inline">清空看板</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 便利貼畫布區域 -->
+  <main id="board" class="flex-1 relative w-full h-full overflow-hidden">
+    <!-- 空狀態提示 -->
+    <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0">
+      <div class="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-stone-300 shadow-xl max-w-sm text-center">
+        <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
+          <i class="fa-solid fa-note-sticky"></i>
+        </div>
+        <h2 class="text-stone-800 font-bold text-lg mb-1">目前沒有便利貼</h2>
+        <p class="text-stone-600 text-sm mb-4">點擊上方色塊立即新增便利貼，記錄想法與代辦事項！</p>
+        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-800 text-xs rounded-full font-medium">支援隨意拖曳、顏色切換與即時寫入</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部簡易狀態列 -->
+  <footer class="bg-amber-950/70 text-amber-200/90 text-xs px-4 py-1.5 flex justify-between items-center border-t border-amber-900/50 z-20 backdrop-blur-sm">
+    <div id="stats-counter">便利貼總數：0 張</div>
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-cloud-arrow-up text-amber-400"></i>
+      <span>LocalStorage 自動備份已啟用</span>
+    </div>
+  </footer>
+
+  <!-- 自定義確認對話框 (非原生 confirm) -->
+  <div id="custom-modal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-transform duration-200" id="modal-card">
+      <div class="flex items-center gap-3 text-red-600 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <h3 class="font-bold text-stone-800 text-base" id="modal-title">確定要刪除嗎？</h3>
+      </div>
+      <p class="text-stone-600 text-sm mb-5 leading-relaxed" id="modal-message">此動作無法還原，請確認是否繼續。</p>
+      <div class="flex justify-end gap-2.5">
+        <button id="modal-cancel-btn" class="px-4 py-2 text-sm rounded-xl font-medium text-stone-600 hover:bg-stone-100 transition">取消</button>
+        <button id="modal-confirm-btn" class="px-4 py-2 text-sm rounded-xl font-medium bg-red-600 text-white hover:bg-red-700 shadow-md transition">確定刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮動提示 Toast -->
+  <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-stone-900/90 text-white text-sm font-medium px-4 py-2 rounded-full shadow-lg z-50 opacity-0 pointer-events-none transition-all duration-300 translate-y-3">
+    提示訊息
+  </div>
+
+  <script>
+    // 便利貼顏色主題定義
+    const NOTE_THEMES = {
+      yellow: {
+        bg: 'bg-amber-100',
+        border: 'border-amber-300',
+        header: 'bg-amber-200/80',
+        accent: 'text-amber-800',
+        badge: 'bg-amber-200 text-amber-800',
+        name: '暖黃'
+      },
+      pink: {
+        bg: 'bg-rose-100',
+        border: 'border-rose-300',
+        header: 'bg-rose-200/80',
+        accent: 'text-rose-800',
+        badge: 'bg-rose-200 text-rose-800',
+        name: '櫻粉'
+      },
+      blue: {
+        bg: 'bg-sky-100',
+        border: 'border-sky-300',
+        header: 'bg-sky-200/80',
+        accent: 'text-sky-800',
+        badge: 'bg-sky-200 text-sky-800',
+        name: '水藍'
+      },
+      green: {
+        bg: 'bg-emerald-100',
+        border: 'border-emerald-300',
+        header: 'bg-emerald-200/80',
+        accent: 'text-emerald-800',
+        badge: 'bg-emerald-200 text-emerald-800',
+        name: '薄荷'
+      },
+      purple: {
+        bg: 'bg-purple-100',
+        border: 'border-purple-300',
+        header: 'bg-purple-200/80',
+        accent: 'text-purple-800',
+        badge: 'bg-purple-200 text-purple-800',
+        name: '淺紫'
+      },
+      orange: {
+        bg: 'bg-orange-100',
+        border: 'border-orange-300',
+        header: 'bg-orange-200/80',
+        accent: 'text-orange-800',
+        badge: 'bg-orange-200 text-orange-800',
+        name: '陽光橘'
+      }
+    };
+
+    // 核心資料狀態
+    const STORAGE_KEY = 'sticky_notes_board_data_v1';
+    let notes = [];
+    let highestZIndex = 10;
+
+    // 從 LocalStorage 載入資料
+    function loadNotesFromStorage() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          notes = JSON.parse(stored);
+          if (!Array.isArray(notes)) notes = [];
+        } else {
+          // 首次無資料時，初始化 2 張導引便利貼
+          notes = [
+            {
+              id: 'init_1',
+              title: '歡迎使用便利貼看板！💡',
+              content: '1. 點擊文字區塊直接輸入與編輯。\n2. 按著標題列可以隨意拖曳位置。\n3. 所有改動都會自動儲存在瀏覽器的 LocalStorage 中。',
+              color: 'yellow',
+              x: 40,
+              y: 50,
+              zIndex: 1,
+              rotation: -1.5,
+              updatedAt: new Date().toISOString()
+            },
+            {
+              id: 'init_2',
+              title: '顏色與管理 🎨',
+              content: '點擊右上角調色盤切換顏色，或者點垃圾桶刪除。\n可部署至 GitHub Pages 隨時使用！',
+              color: 'pink',
+              x: 320,
+              y: 80,
+              zIndex: 2,
+              rotation: 1.8,
+              updatedAt: new Date().toISOString()
+            }
+          ];
+          saveNotesToStorage();
+        }
+      } catch (err) {
+        console.error('讀取 LocalStorage 發生錯誤:', err);
+        notes = [];
+      }
+    }
+
+    // 儲存至 LocalStorage
+    function saveNotesToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+        updateStats();
+      } catch (err) {
+        console.error('寫入 LocalStorage 失敗:', err);
+        showToast('儲存失敗：空間不足或被禁用');
+      }
+    }
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      // 清空目前已渲染的便利貼（保留空狀態提示）
+      const existingElements = board.querySelectorAll('.sticky-note');
+      existingElements.forEach(el => el.remove());
+
+      const emptyState = document.getElementById('empty-state');
+      if (notes.length === 0) {
+        emptyState.classList.remove('opacity-0');
+        emptyState.classList.add('opacity-100');
+      } else {
+        emptyState.classList.add('opacity-0');
+        emptyState.classList.remove('opacity-100');
+      }
+
+      // 取得最大 zIndex
+      notes.forEach(n => {
+        if (n.zIndex && n.zIndex > highestZIndex) highestZIndex = n.zIndex;
+      });
+
+      // 渲染每張便利貼
+      notes.forEach(note => {
+        const noteEl = createNoteElement(note);
+        board.appendChild(noteEl);
+      });
+
+      updateStats();
+    }
+
+    function createNoteElement(note) {
+      const theme = NOTE_THEMES[note.color] || NOTE_THEMES.yellow;
+      const el = document.createElement('div');
+      el.className = `sticky-note absolute w-64 sm:w-72 rounded-xl border flex flex-col ${theme.bg} ${theme.border}`;
+      el.id = `note-${note.id}`;
+      el.style.left = `${note.x}px`;
+      el.style.top = `${note.y}px`;
+      el.style.zIndex = note.zIndex || 1;
+      el.style.transform = `rotate(${note.rotation || 0}deg)`;
+
+      // 格式化更新時間
+      const timeStr = note.updatedAt ? new Date(note.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+      el.innerHTML = `
+        <!-- 頂部膠帶視覺飾條 -->
+        <div class="tape-strip w-20 h-4 mx-auto -mt-2 rounded-sm pointer-events-none"></div>
+
+        <!-- 標題與操作列 (拖曳把手) -->
+        <div class="note-header px-3.5 pt-1.5 pb-2 flex items-center justify-between cursor-move ${theme.header} rounded-t-lg select-none">
+          <div class="flex items-center gap-1.5 flex-1 mr-2 overflow-hidden">
+            <i class="fa-solid fa-grip-vertical text-xs opacity-40"></i>
+            <input 
+              type="text" 
+              class="note-title bg-transparent font-bold text-stone-800 text-sm focus:outline-none focus:ring-1 focus:ring-stone-400 rounded px-1 w-full"
+              value="${escapeHtml(note.title)}"
+              placeholder="便利貼標題..."
+              oninput="handleTitleChange('${note.id}', this.value)"
+              onmousedown="event.stopPropagation()"
+              ontouchstart="event.stopPropagation()"
+            />
+          </div>
+          
+          <div class="flex items-center gap-1">
+            <!-- 顏色選單下拉按鈕 -->
+            <div class="relative group" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+              <button class="w-6 h-6 rounded flex items-center justify-center hover:bg-black/10 text-stone-600 transition" title="更換顏色">
+                <i class="fa-solid fa-palette text-xs"></i>
+              </button>
+              <div class="hidden group-hover:flex absolute right-0 top-full mt-1 bg-white p-1.5 rounded-lg shadow-xl border border-stone-200 z-50 gap-1">
+                ${Object.keys(NOTE_THEMES).map(c => `
+                  <button onclick="changeNoteColor('${note.id}', '${c}')" class="w-5 h-5 rounded-full ${NOTE_THEMES[c].bg} border ${NOTE_THEMES[c].border} hover:scale-125 transition-transform" title="${NOTE_THEMES[c].name}"></button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- 刪除按鈕 -->
+            <button 
+              onclick="promptDeleteNote('${note.id}')"
+              class="w-6 h-6 rounded flex items-center justify-center hover:bg-red-500 hover:text-white text-stone-500 transition" 
+              title="刪除"
+              onmousedown="event.stopPropagation()"
+              ontouchstart="event.stopPropagation()"
+            >
+              <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 內容文字輸入區塊 -->
+        <div class="p-3 flex-1 flex flex-col cursor-text" onmousedown="bringToFront('${note.id}')" ontouchstart="bringToFront('${note.id}')">
+          <textarea 
+            class="note-content w-full h-32 bg-transparent resize-none text-stone-700 text-sm focus:outline-none leading-relaxed"
+            placeholder="點擊輸入記事內容..."
+            oninput="handleContentChange('${note.id}', this.value)"
+            onmousedown="event.stopPropagation()"
+            ontouchstart="event.stopPropagation()"
+          >${escapeHtml(note.content)}</textarea>
+
+          <div class="mt-2 pt-2 border-t border-black/5 flex items-center justify-between text-[11px] text-stone-500">
+            <span class="updated-time opacity-75">${timeStr ? `編輯於 ${timeStr}` : ''}</span>
+            <span class="px-1.5 py-0.5 rounded font-mono text-[10px] ${theme.badge}">${theme.name}</span>
+          </div>
+        </div>
+      `;
+
+      // 綁定拖曳事件 (支援滑鼠與觸控)
+      initDraggable(el, note.id);
+
+      return el;
+    }
+
+    function initDraggable(element, noteId) {
+      const header = element.querySelector('.note-header');
+      let isDragging = false;
+      let startX, startY;
+      let initialLeft, initialTop;
+
+      const onStart = (e) => {
+        bringToFront(noteId);
+        isDragging = true;
+        element.classList.add('dragging');
+
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+        startX = clientX;
+        startY = clientY;
+
+        initialLeft = element.offsetLeft;
+        initialTop = element.offsetTop;
+
+        document.addEventListener('mousemove', onMove, { passive: false });
+        document.addEventListener('mouseup', onEnd);
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+      };
+
+      const onMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+
+        const board = document.getElementById('board');
+        const maxLeft = board.clientWidth - element.offsetWidth;
+        const maxTop = board.clientHeight - element.offsetHeight;
+
+        // 限制在看板內移動
+        let newX = Math.max(0, Math.min(initialLeft + deltaX, maxLeft));
+        let newY = Math.max(0, Math.min(initialTop + deltaY, maxTop));
+
+        element.style.left = `${newX}px`;
+        element.style.top = `${newY}px`;
+      };
+
+      const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        element.classList.remove('dragging');
+
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+
+        // 同步更新至資料狀態並儲存
+        const note = notes.find(n => n.id === noteId);
+        if (note) {
+          note.x = element.offsetLeft;
+          note.y = element.offsetTop;
+          saveNotesToStorage();
+        }
+      };
+
+      header.addEventListener('mousedown', onStart);
+      header.addEventListener('touchstart', onStart, { passive: true });
+    }
+
+    // 置頂顯示
+    function bringToFront(id) {
+      highestZIndex += 1;
+      const el = document.getElementById(`note-${id}`);
+      if (el) el.style.zIndex = highestZIndex;
+
+      const note = notes.find(n => n.id === id);
+      if (note) {
+        note.zIndex = highestZIndex;
+        saveNotesToStorage();
+      }
+    }
+
+    // 新增便利貼
+    function addNote(color = 'yellow') {
+      const board = document.getElementById('board');
+      const boardWidth = board.clientWidth || 800;
+      const boardHeight = board.clientHeight || 600;
+
+      // 隨機在畫面視窗中心附近展開
+      const randomOffsetX = Math.floor(Math.random() * 160) - 80;
+      const randomOffsetY = Math.floor(Math.random() * 120) - 60;
+      const x = Math.max(20, Math.min((boardWidth / 2) - 140 + randomOffsetX, boardWidth - 300));
+      const y = Math.max(20, Math.min((boardHeight / 2) - 140 + randomOffsetY, boardHeight - 260));
+
+      // 微幅旋轉角度 (-3.5deg 到 +3.5deg)
+      const rotation = parseFloat(((Math.random() * 7) - 3.5).toFixed(1));
+
+      highestZIndex += 1;
+      const newNote = {
+        id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        title: '新靈感',
+        content: '',
+        color: color,
+        x: Math.round(x),
+        y: Math.round(y),
+        zIndex: highestZIndex,
+        rotation: rotation,
+        updatedAt: new Date().toISOString()
+      };
+
+      notes.push(newNote);
+      saveNotesToStorage();
+      renderBoard();
+
+      // 自動聚焦新建立的便利貼內容區
+      setTimeout(() => {
+        const newEl = document.getElementById(`note-${newNote.id}`);
+        if (newEl) {
+          const textarea = newEl.querySelector('textarea');
+          if (textarea) textarea.focus();
+        }
+      }, 50);
+
+      showToast('已新增便利貼');
+    }
+
+    // 處理標題變更
+    function handleTitleChange(id, value) {
+      const note = notes.find(n => n.id === id);
+      if (note) {
+        note.title = value;
+        note.updatedAt = new Date().toISOString();
+        saveNotesToStorage();
+      }
+    }
+
+    // 處理內容變更
+    function handleContentChange(id, value) {
+      const note = notes.find(n => n.id === id);
+      if (note) {
+        note.content = value;
+        note.updatedAt = new Date().toISOString();
+        saveNotesToStorage();
+
+        // 更新時間字串
+        const el = document.getElementById(`note-${id}`);
+        if (el) {
+          const timeSpan = el.querySelector('.updated-time');
+          if (timeSpan) {
+            const timeStr = new Date(note.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timeSpan.textContent = `編輯於 ${timeStr}`;
+          }
+        }
+      }
+    }
+
+    // 切換顏色
+    function changeNoteColor(id, newColor) {
+      const note = notes.find(n => n.id === id);
+      if (note && NOTE_THEMES[newColor]) {
+        note.color = newColor;
+        saveNotesToStorage();
+        renderBoard();
+        showToast(`已更換為${NOTE_THEMES[newColor].name}`);
+      }
+    }
+
+    let pendingAction = null;
+
+    function openModal({ title, message, onConfirm }) {
+      const modal = document.getElementById('custom-modal');
+      const modalCard = document.getElementById('modal-card');
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-message').textContent = message;
+
+      pendingAction = onConfirm;
+
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        modalCard.classList.remove('scale-95');
+        modalCard.classList.add('scale-100');
+      });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('custom-modal');
+      const modalCard = document.getElementById('modal-card');
+
+      modal.classList.add('opacity-0');
+      modalCard.classList.add('scale-95');
+      modalCard.classList.remove('scale-100');
+
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        pendingAction = null;
+      }, 200);
+    }
+
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+    document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+      if (typeof pendingAction === 'function') {
+        pendingAction();
+      }
+      closeModal();
+    });
+
+    // 刪除個別便利貼
+    function promptDeleteNote(id) {
+      const note = notes.find(n => n.id === id);
+      const noteName = note && note.title ? `「${note.title}」` : '此便利貼';
+
+      openModal({
+        title: '確認刪除',
+        message: `確定要刪除 ${noteName} 嗎？此動作將立即從 LocalStorage 移除。`,
+        onConfirm: () => {
+          notes = notes.filter(n => n.id !== id);
+          saveNotesToStorage();
+          renderBoard();
+          showToast('已刪除便利貼');
+        }
+      });
+    }
+
+    // 清空全部便利貼
+    function confirmClearAll() {
+      if (notes.length === 0) {
+        showToast('目前看板是空的');
+        return;
+      }
+
+      openModal({
+        title: '清空看板所有便利貼',
+        message: `確定要清除看板上所有的 ${notes.length} 張便利貼嗎？清除後資料將完全重設。`,
+        onConfirm: () => {
+          notes = [];
+          saveNotesToStorage();
+          renderBoard();
+          showToast('已清空所有便利貼');
+        }
+      });
+    }
+
+    // 自動整齊排列
+    function tidyNotes() {
+      if (notes.length === 0) return;
+      const board = document.getElementById('board');
+      const startX = 30;
+      const startY = 30;
+      const cardWidth = 300;
+      const cardHeight = 240;
+      const gap = 20;
+
+      const cols = Math.max(1, Math.floor((board.clientWidth - 40) / (cardWidth + gap)));
+
+      notes.forEach((note, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        note.x = startX + col * (cardWidth + gap);
+        note.y = startY + row * (cardHeight + gap);
+        note.rotation = 0; // 整齊排列時轉正
+      });
+
+      saveNotesToStorage();
+      renderBoard();
+      showToast('已自動整齊排列');
+    }
+
+    function updateStats() {
+      const counter = document.getElementById('stats-counter');
+      if (counter) {
+        counter.textContent = `便利貼總數：${notes.length} 張`;
+      }
+    }
+
+    let toastTimer = null;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0', 'translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-3');
+      }, 2200);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 視窗調整大小時，避免便利貼超出邊界
+    window.addEventListener('resize', () => {
+      const board = document.getElementById('board');
+      let changed = false;
+      notes.forEach(note => {
+        if (note.x > board.clientWidth - 100) {
+          note.x = Math.max(20, board.clientWidth - 300);
+          changed = true;
+        }
+        if (note.y > board.clientHeight - 80) {
+          note.y = Math.max(20, board.clientHeight - 240);
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveNotesToStorage();
+        renderBoard();
+      }
+    });
+
+    // 應用程式初始化
+    window.addEventListener('DOMContentLoaded', () => {
+      loadNotesFromStorage();
+      renderBoard();
+    });
+  </script>
+</body>
+</html>
